@@ -34,74 +34,7 @@ $departamento = $_SESSION['departamento_nombre'];
     <div class="dashboard-container">
         
         <!-- SIDEBAR -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <i class="bi bi-people-fill text-white fs-1 mb-2"></i>
-                <h4><?php echo htmlspecialchars($departamento); ?></h4>
-                <small class="text-white-50"><?php echo htmlspecialchars($nombre_usuario); ?></small>
-                <span class="badge bg-info mt-2">Colaborativo</span>
-            </div>
-            
-            <nav class="sidebar-nav">
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="<?php echo URL_BASE; ?>dashboard/colaborativo.php">
-                            <i class="bi bi-house-door"></i> Inicio
-                        </a>
-                    </li>
-                    
-                    <hr class="text-white-50 my-2">
-                    <small class="text-white-50 px-3 fw-bold">MIS SOLICITUDES</small>
-                    
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalNuevaSolicitud">
-                            <i class="bi bi-plus-circle"></i> Nueva Solicitud
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo URL_BASE; ?>solicitudes/crear_mantenimiento.php">
-                            <i class="bi bi-tools"></i> Solicitar Mantenimiento
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo URL_BASE; ?>solicitudes/listar.php">
-                            <i class="bi bi-list-ul"></i> Mis Solicitudes
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo URL_BASE; ?>solicitudes/listar_mantenimientos.php">
-                            <i class="bi bi-wrench"></i> Mis Mantenimientos
-                        </a>
-                    </li>
-                    
-                    <hr class="text-white-50 my-2">
-                    <small class="text-white-50 px-3 fw-bold">ÁREA COLABORATIVA</small>
-                    
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo URL_BASE; ?>documentos/crear.php">
-                            <i class="bi bi-file-earmark-plus"></i> Nuevo Documento
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo URL_BASE; ?>colaborativo/documentos.php">
-                            <i class="bi bi-folder-symlink"></i> Documentos Compartidos
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo URL_BASE; ?>colaborativo/base_datos.php">
-                            <i class="bi bi-database"></i> Base de Datos
-                        </a>
-                    </li>
-                    
-                    <hr class="text-white-50 my-3">
-                    <li class="nav-item">
-                        <a class="nav-link text-white fw-bold" href="<?php echo URL_BASE; ?>auth/logout.php">
-                            <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </aside>
+        <?php include __DIR__ . '/../includes/sidebar_colaborativo.php'; ?>
 
         <!-- CONTENIDO PRINCIPAL -->
         <main class="main-content">
@@ -148,8 +81,8 @@ $departamento = $_SESSION['departamento_nombre'];
                                     <a href="#" class="btn btn-gradient" data-bs-toggle="modal" data-bs-target="#modalNuevaSolicitud">
                                         <i class="bi bi-plus-circle"></i> Nueva Solicitud
                                     </a>
-                                    <a href="<?php echo URL_BASE; ?>documentos/crear.php" class="btn btn-success">
-                                        <i class="bi bi-file-earmark-plus"></i> Crear Documento Colaborativo
+                                    <a href="<?php echo URL_BASE; ?>dashboard/documentos_colaborativos.php" class="btn btn-success">
+                                        <i class="bi bi-file-earmark-text"></i> Documentos SSC
                                     </a>
                                 </div>
                             </div>

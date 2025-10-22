@@ -52,6 +52,14 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <hr class="text-white-50 my-2">
             <small class="text-white-50 px-3 fw-bold">ÁREA COLABORATIVA</small>
             
+            <!-- NUEVO: Documentos Colaborativos SSC -->
+            <li class="nav-item">
+                <a class="nav-link <?php echo $current_page == 'documentos_colaborativos.php' ? 'active' : ''; ?>" 
+                   href="<?php echo URL_BASE; ?>dashboard/documentos_colaborativos.php">
+                    <i class="bi bi-file-earmark-text"></i> Documentos SSC
+                </a>
+            </li>
+            
             <li class="nav-item">
                 <a class="nav-link <?php echo $current_page == 'documentos.php' ? 'active' : ''; ?>" 
                    href="<?php echo URL_BASE; ?>colaborativo/documentos.php">
