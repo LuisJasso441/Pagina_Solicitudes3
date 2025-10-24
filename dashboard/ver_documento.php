@@ -148,7 +148,7 @@ if ($documento['servicio_solicitado'] == 'otro' && $documento['servicio_otro_esp
     </style>
 </head>
 <body>
-    <?php include __DIR__ . '/../includes/sidebar.php'; ?>
+    <?php include __DIR__ . '/../includes/sidebar_colaborativo.php'; ?>
     
     <div class="main-content">
         <?php include __DIR__ . '/../includes/header.php'; ?>

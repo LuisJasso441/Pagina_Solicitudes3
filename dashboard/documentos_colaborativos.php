@@ -6,12 +6,13 @@
 
 session_start();
 require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../auth/verificar_sesion.php';
 require_once __DIR__ . '/../includes/documentos_colaborativos.php';
+require_once __DIR__ . '/../includes/documentos_comentarios.php';
 
 // Verificar autenticación
-if (!sesion_activa()) {
-    header('Location: /Pagina_Solicitudes3/login.php');
+if (!isset($_SESSION['usuario_id'])) {
+    header('Location: ' . URL_BASE . 'login.php');
     exit;
 }
 
@@ -23,7 +24,7 @@ $dept_lower = strtolower($departamento);
 // Verificar que el usuario tenga acceso (Normatividad, Ventas o Laboratorio)
 $departamentos_permitidos = ['normatividad', 'ventas', 'laboratorio'];
 if (!in_array($dept_lower, $departamentos_permitidos)) {
-    header('Location: /Pagina_Solicitudes3/dashboard/departamento.php');
+    header('Location: ' . URL_BASE . 'dashboard/departamento.php');
     exit;
 }
 
@@ -72,7 +73,7 @@ $documentos = listar_documentos($filtros, $usuario_id, $departamento);
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     
     <!-- Estilos personalizados -->
-    <link rel="stylesheet" href="/Pagina_Solicitudes3/assets/css/dashboard.css">
+    <link rel="stylesheet" href="<?php echo URL_BASE; ?>assets/css/dashboard.css">
     
     <style>
         .documento-card {
@@ -119,10 +120,9 @@ $documentos = listar_documentos($filtros, $usuario_id, $departamento);
     </style>
 </head>
 <body>
-    <?php include __DIR__ . '/../includes/sidebar.php'; ?>
+    <?php include __DIR__ . '/../includes/sidebar_colaborativo.php'; ?>
     
     <div class="main-content">
-        <?php include __DIR__ . '/../includes/header.php'; ?>
         
         <div class="container-fluid p-4">
             <!-- Header -->
@@ -311,6 +311,6 @@ $documentos = listar_documentos($filtros, $usuario_id, $departamento);
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/Pagina_Solicitudes3/assets/js/notificaciones.js"></script>
+    <script src="<?php echo URL_BASE; ?>assets/js/notificaciones.js"></script>
 </body>
 </html>

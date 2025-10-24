@@ -9,7 +9,7 @@ session_start();
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../auth/verificar_sesion.php';
 require_once __DIR__ . '/../includes/documentos_colaborativos.php';
 
 // Verificar autenticación
