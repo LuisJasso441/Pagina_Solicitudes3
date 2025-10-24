@@ -33,6 +33,12 @@
     </div>
     
     <form id="formApartado1" <?= !$permisos['apartado1'] ? 'style="pointer-events: none;"' : '' ?>>
+        <?php 
+        require_once __DIR__ . '/csrf.php';
+        if ($permisos['apartado1']) {
+            echo campo_csrf();
+        }
+        ?>
         <input type="hidden" name="documento_id" value="<?= $documento['id'] ?>">
         
         <div class="row">

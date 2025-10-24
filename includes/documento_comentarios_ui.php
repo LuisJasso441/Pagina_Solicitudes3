@@ -106,6 +106,10 @@
             </div>
             <div class="card-body">
                 <form id="formNuevoComentario">
+                    <?php 
+                    require_once __DIR__ . '/csrf.php';
+                    echo campo_csrf();
+                    ?>
                     <input type="hidden" name="documento_id" value="<?= $documento['id'] ?>">
                     <input type="hidden" name="folio" value="<?= htmlspecialchars($documento['folio']) ?>">
                     

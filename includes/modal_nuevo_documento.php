@@ -1,3 +1,17 @@
+<?php
+/**
+ * Modal para crear nuevo documento colaborativo SSC
+ */
+
+// Asegurar que la sesión está iniciada
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Cargar funciones CSRF
+require_once __DIR__ . '/csrf.php';
+?>
+
 <!-- Modal: Nuevo Documento Colaborativo -->
 <div class="modal fade" id="modalNuevoDocumento" tabindex="-1" aria-labelledby="modalNuevoDocumentoLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -11,6 +25,8 @@
             </div>
             
             <form id="formNuevoDocumento" action="/Pagina_Solicitudes3/documentos/procesar_crear.php" method="POST">
+                <?php echo campo_csrf(); ?>
+                
                 <div class="modal-body">
                     <!-- Logo y título del formulario -->
                     <div class="text-center mb-4 pb-3 border-bottom">
@@ -34,7 +50,7 @@
                                        class="form-control" 
                                        id="solicitado_por" 
                                        name="solicitado_por" 
-                                       value="<?= htmlspecialchars($nombre_usuario) ?>"
+                                       value="<?= htmlspecialchars($nombre_usuario ?? '') ?>"
                                        required>
                             </div>
                             
