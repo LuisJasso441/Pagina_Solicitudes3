@@ -1,329 +1,312 @@
 <?php
 /**
- * Interfaz de usuario para comentarios de documentos colaborativos
- * Vista de lectura y formulario de publicación
+ * Sistema de Comentarios para Documentos Colaborativos
  */
 
-// Generar token CSRF para formularios
-$csrf_token = generar_token_csrf();
-?>
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/notificaciones.php';
 
-<div class="row">
-    <!-- Panel izquierdo: Lista de comentarios -->
-    <div class="col-md-7">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-chat-dots"></i>
-                    Comentarios (<?= count($comentarios) ?>)
-                </h5>
-            </div>
-            <div class="card-body comentarios-panel">
-                <?php if (count($comentarios) > 0): ?>
-                    <?php foreach ($comentarios as $comentario): ?>
-                        <div class="comentario-item tipo-<?= htmlspecialchars($comentario['tipo_mensaje']) ?>">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                    <strong><?= htmlspecialchars($comentario['usuario_autor_nombre']) ?></strong>
-                                    <span class="badge bg-secondary ms-2"><?= htmlspecialchars($comentario['departamento_autor']) ?></span>
-                                    
-                                    <?php
-                                    $tipo_badges = [
-                                        'normal' => ['text' => 'Comentario', 'color' => 'secondary'],
-                                        'aclaracion' => ['text' => 'Aclaración', 'color' => 'info'],
-                                        'correccion' => ['text' => 'Corrección', 'color' => 'warning'],
-                                        'solicitud' => ['text' => 'Solicitud', 'color' => 'primary']
-                                    ];
-                                    
-                                    $badge_info = $tipo_badges[$comentario['tipo_mensaje']] ?? $tipo_badges['normal'];
-                                    ?>
-                                    
-                                    <span class="badge bg-<?= $badge_info['color'] ?> ms-1">
-                                        <?= $badge_info['text'] ?>
-                                    </span>
-                                </div>
-                                <div class="text-end">
-                                    <small class="text-muted">
-                                        <?= date('d/m/Y H:i', strtotime($comentario['fecha_hora_publicacion'])) ?>
-                                    </small>
-                                    
-                                    <?php
-                                    // Mostrar botón eliminar si es el autor o es admin
-                                    $puede_eliminar = ($comentario['usuario_autor_id'] == $usuario_id) || (strtolower($departamento) === 'ti_sistemas');
-                                    if ($puede_eliminar && $documento['estado'] !== 'completado'):
-                                    ?>
-                                        <button class="btn btn-sm btn-outline-danger ms-2" 
-                                                onclick="eliminarComentario(<?= $comentario['id'] ?>)"
-                                                title="Eliminar comentario">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                            <p class="mb-0"><?= nl2br(htmlspecialchars($comentario['texto_comentario'])) ?></p>
-                        </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="text-center text-muted py-5">
-                        <i class="bi bi-chat-dots" style="font-size: 3rem;"></i>
-                        <p class="mt-3">No hay comentarios aún</p>
-                        <p>Sé el primero en comentar este documento</p>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Panel derecho: Formulario de nuevo comentario -->
-    <div class="col-md-5">
-        <div class="card">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-pencil-square"></i>
-                    Nuevo Comentario
-                </h5>
-            </div>
-            <div class="card-body">
-                <?php if ($permisos['puede_comentar'] && $documento['estado'] !== 'completado'): ?>
-                    <form id="formNuevoComentario">
-                        <!-- Token CSRF -->
-                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                        <input type="hidden" name="documento_id" value="<?= $documento['id'] ?>">
-                        <input type="hidden" name="folio" value="<?= htmlspecialchars($documento['folio']) ?>">
-                        
-                        <!-- Tipo de mensaje -->
-                        <div class="mb-3">
-                            <label class="form-label">Tipo de mensaje</label>
-                            <select class="form-select" name="tipo_mensaje" required>
-                                <option value="normal">💬 Comentario normal</option>
-                                <option value="aclaracion">❓ Solicitar aclaración</option>
-                                <option value="correccion">✏️ Sugerir corrección</option>
-                                <option value="solicitud">📋 Solicitud de información</option>
-                            </select>
-                            <small class="form-text text-muted">
-                                Selecciona el tipo de comentario para mejor organización
-                            </small>
-                        </div>
-                        
-                        <!-- Texto del comentario -->
-                        <div class="mb-3">
-                            <label class="form-label">Comentario</label>
-                            <textarea class="form-control" 
-                                      name="texto_comentario" 
-                                      rows="6" 
-                                      maxlength="1000"
-                                      placeholder="Escribe tu comentario aquí..."
-                                      required></textarea>
-                            <small class="form-text text-muted">
-                                Mínimo 5 caracteres, máximo 1000
-                            </small>
-                        </div>
-                        
-                        <!-- Botón publicar -->
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-success" id="btnPublicarComentario">
-                                <i class="bi bi-send"></i>
-                                Publicar Comentario
-                            </button>
-                        </div>
-                    </form>
-                <?php elseif ($documento['estado'] === 'completado'): ?>
-                    <div class="alert alert-warning">
-                        <i class="bi bi-lock"></i>
-                        <strong>Documento completado</strong>
-                        <p class="mb-0">No se pueden agregar más comentarios a documentos completados.</p>
-                    </div>
-                <?php else: ?>
-                    <div class="alert alert-danger">
-                        <i class="bi bi-exclamation-triangle"></i>
-                        <strong>Sin permisos</strong>
-                        <p class="mb-0">No tienes permiso para comentar en este documento.</p>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
+/**
+ * Agregar comentario a un documento
+ */
+function agregar_comentario_documento($documento_id, $folio, $usuario_id, $nombre_usuario, $departamento, $texto, $tipo = 'normal') {
+    try {
+        $pdo = conectarDB();
         
-        <!-- Leyenda de tipos de comentarios -->
-        <div class="card mt-3">
-            <div class="card-header">
-                <h6 class="mb-0">Tipos de comentarios</h6>
-            </div>
-            <div class="card-body">
-                <small>
-                    <div class="mb-2">
-                        <span class="badge bg-secondary">Comentario</span>
-                        Observaciones generales
-                    </div>
-                    <div class="mb-2">
-                        <span class="badge bg-info">Aclaración</span>
-                        Dudas o consultas
-                    </div>
-                    <div class="mb-2">
-                        <span class="badge bg-warning">Corrección</span>
-                        Sugerencias de cambio
-                    </div>
-                    <div class="mb-2">
-                        <span class="badge bg-primary">Solicitud</span>
-                        Peticiones específicas
-                    </div>
-                </small>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- JavaScript para comentarios -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const formComentario = document.getElementById('formNuevoComentario');
-    
-    if (formComentario) {
-        formComentario.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const btnPublicar = document.getElementById('btnPublicarComentario');
-            const textoOriginal = btnPublicar.innerHTML;
-            
-            // Validar longitud del comentario
-            const textoComentario = formComentario.querySelector('[name="texto_comentario"]');
-            if (textoComentario.value.trim().length < 5) {
-                mostrarAlerta('warning', 'Atención', 'El comentario debe tener al menos 5 caracteres');
-                textoComentario.focus();
-                return;
-            }
-            
-            btnPublicar.disabled = true;
-            btnPublicar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Publicando...';
-            
-            const formData = new FormData(this);
-            
-            fetch('/Pagina_Solicitudes3/documentos/procesar_comentario.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                // Log para debug
-                console.log('Response status:', response.status);
-                console.log('Response headers:', response.headers.get('content-type'));
-                return response.text();
-            })
-            .then(text => {
-                // Log del texto raw antes de parsear
-                console.log('Response text:', text);
-                
-                try {
-                    const data = JSON.parse(text);
-                    
-                    if (data.success) {
-                        mostrarAlerta('success', 'Éxito', data.message);
-                        
-                        // Limpiar formulario
-                        textoComentario.value = '';
-                        formComentario.querySelector('[name="tipo_mensaje"]').value = 'normal';
-                        
-                        // Recargar después de 1.5 segundos
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1500);
-                    } else {
-                        mostrarAlerta('danger', 'Error', data.message);
-                        btnPublicar.disabled = false;
-                        btnPublicar.innerHTML = textoOriginal;
-                    }
-                } catch (parseError) {
-                    console.error('Error parsing JSON:', parseError);
-                    console.error('Raw response:', text);
-                    mostrarAlerta('danger', 'Error', 'Respuesta inválida del servidor. Revisa la consola para más detalles.');
-                    btnPublicar.disabled = false;
-                    btnPublicar.innerHTML = textoOriginal;
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                mostrarAlerta('danger', 'Error', 'Error al procesar la solicitud');
-                btnPublicar.disabled = false;
-                btnPublicar.innerHTML = textoOriginal;
-            });
-        });
-    }
-});
-
-// Función para eliminar comentario
-function eliminarComentario(comentarioId) {
-    if (!confirm('¿Estás seguro de eliminar este comentario?\n\nEsta acción no se puede deshacer.')) {
-        return;
-    }
-    
-    const formData = new FormData();
-    formData.append('csrf_token', '<?= htmlspecialchars($csrf_token) ?>');
-    formData.append('accion', 'eliminar');
-    formData.append('comentario_id', comentarioId);
-    
-    fetch('/Pagina_Solicitudes3/documentos/procesar_comentario.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            mostrarAlerta('success', 'Éxito', data.message);
-            
-            // Recargar después de 1 segundo
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-        } else {
-            mostrarAlerta('danger', 'Error', data.message);
+        // Verificar que el documento existe (permitir comentarios en completados)
+        $stmt = $pdo->prepare("SELECT id, estado, usuario_creador_id, usuario_seguimiento_id FROM documentos_colaborativos WHERE id = ?");
+        $stmt->execute([$documento_id]);
+        $documento = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$documento) {
+            return ['success' => false, 'message' => 'Documento no encontrado'];
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        mostrarAlerta('danger', 'Error', 'Error al eliminar el comentario');
-    });
-}
-
-// Función mostrarAlerta (si no existe en documento_editar.js)
-if (typeof mostrarAlerta === 'undefined') {
-    function mostrarAlerta(tipo, titulo, mensaje) {
-        const iconos = {
-            success: 'check-circle-fill',
-            danger: 'exclamation-triangle-fill',
-            warning: 'exclamation-circle-fill',
-            info: 'info-circle-fill'
-        };
         
-        const icono = iconos[tipo] || 'info-circle-fill';
+        // ⭐ PERMITIR COMENTARIOS EN DOCUMENTOS COMPLETADOS
+        // La validación de estado completado ha sido removida
         
-        const alertaHTML = `
-            <div class="alert alert-${tipo} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3 shadow-lg" 
-                 style="z-index: 9999; min-width: 350px; max-width: 500px;" 
-                 role="alert">
-                <div class="d-flex align-items-center">
-                    <i class="bi bi-${icono} me-2" style="font-size: 1.5rem;"></i>
-                    <div class="flex-grow-1">
-                        <strong>${titulo}</strong><br>
-                        <small>${mensaje}</small>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            </div>
-        `;
+        // Validar tipo de mensaje
+        $tipos_validos = ['normal', 'aclaracion', 'correccion', 'solicitud'];
+        if (!in_array($tipo, $tipos_validos)) {
+            $tipo = 'normal';
+        }
         
-        document.body.insertAdjacentHTML('beforeend', alertaHTML);
+        // Insertar comentario
+        $stmt = $pdo->prepare("
+            INSERT INTO documentos_comentarios (
+                documento_id, folio_documento, usuario_autor_id, usuario_autor_nombre,
+                departamento_autor, texto_comentario, tipo_mensaje, fecha_hora_publicacion
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
         
-        // Auto-cerrar después de 5 segundos
-        setTimeout(() => {
-            const alertas = document.querySelectorAll('.alert');
-            if (alertas.length > 0) {
-                const ultimaAlerta = alertas[alertas.length - 1];
-                const bsAlert = bootstrap.Alert.getInstance(ultimaAlerta);
-                if (bsAlert) {
-                    bsAlert.close();
-                } else {
-                    ultimaAlerta.remove();
-                }
-            }
-        }, 5000);
+        $resultado = $stmt->execute([
+            $documento_id,
+            $folio,
+            $usuario_id,
+            $nombre_usuario,
+            $departamento,
+            trim($texto),
+            $tipo
+        ]);
+        
+        if ($resultado) {
+            $comentario_id = $pdo->lastInsertId();
+            
+            // Registrar en historial del documento
+            registrar_historial_documento(
+                $documento_id,
+                $folio,
+                $usuario_id,
+                $nombre_usuario,
+                $departamento,
+                'comentario_agregado',
+                null,
+                null,
+                "Comentario tipo: {$tipo}"
+            );
+            
+            // ⭐ Notificar a usuarios involucrados (excepto al autor del comentario)
+            notificar_nuevo_comentario($documento, $usuario_id, $nombre_usuario, $departamento, $folio, $texto, $tipo);
+            
+            return [
+                'success' => true,
+                'message' => 'Comentario agregado exitosamente',
+                'comentario_id' => $comentario_id
+            ];
+        }
+        
+        return ['success' => false, 'message' => 'Error al agregar comentario'];
+        
+    } catch (Exception $e) {
+        error_log("Error al agregar comentario: " . $e->getMessage());
+        return ['success' => false, 'message' => 'Error del sistema: ' . $e->getMessage()];
     }
 }
-</script>
+
+/**
+ * Obtener comentarios de un documento
+ */
+function obtener_comentarios_documento($documento_id) {
+    try {
+        $pdo = conectarDB();
+        
+        $stmt = $pdo->prepare("
+            SELECT * FROM documentos_comentarios 
+            WHERE documento_id = ? 
+            ORDER BY fecha_hora_publicacion ASC
+        ");
+        
+        $stmt->execute([$documento_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+    } catch (Exception $e) {
+        error_log("Error al obtener comentarios: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Eliminar comentario (solo el autor o admin)
+ */
+function eliminar_comentario($comentario_id, $usuario_id, $es_admin = false) {
+    try {
+        $pdo = conectarDB();
+        
+        // Verificar que el comentario existe y pertenece al usuario
+        $stmt = $pdo->prepare("SELECT usuario_autor_id, documento_id FROM documentos_comentarios WHERE id = ?");
+        $stmt->execute([$comentario_id]);
+        $comentario = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$comentario) {
+            return ['success' => false, 'message' => 'Comentario no encontrado'];
+        }
+        
+        // Solo el autor o un admin pueden eliminar
+        if ($comentario['usuario_autor_id'] != $usuario_id && !$es_admin) {
+            return ['success' => false, 'message' => 'No tienes permiso para eliminar este comentario'];
+        }
+        
+        // Eliminar
+        $stmt = $pdo->prepare("DELETE FROM documentos_comentarios WHERE id = ?");
+        $resultado = $stmt->execute([$comentario_id]);
+        
+        if ($resultado) {
+            return ['success' => true, 'message' => 'Comentario eliminado'];
+        }
+        
+        return ['success' => false, 'message' => 'Error al eliminar'];
+        
+    } catch (Exception $e) {
+        error_log("Error al eliminar comentario: " . $e->getMessage());
+        return ['success' => false, 'message' => 'Error del sistema'];
+    }
+}
+
+/**
+ * Contar comentarios de un documento
+ */
+function contar_comentarios_documento($documento_id) {
+    try {
+        $pdo = conectarDB();
+        
+        $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM documentos_comentarios WHERE documento_id = ?");
+        $stmt->execute([$documento_id]);
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $resultado['total'];
+        
+    } catch (Exception $e) {
+        error_log("Error al contar comentarios: " . $e->getMessage());
+        return 0;
+    }
+}
+
+/**
+ * ⭐ MEJORADO: Notificar nuevo comentario a usuarios involucrados Y departamentos colaborativos
+ */
+function notificar_nuevo_comentario($documento, $autor_id, $autor_nombre, $autor_dept, $folio, $texto, $tipo) {
+    try {
+        // Validar que $documento tenga 'id'
+        if (!isset($documento['id'])) {
+            error_log("Error: documento sin ID en notificar_nuevo_comentario");
+            return;
+        }
+        
+        $pdo = conectarDB();
+        
+        // ========================================
+        // ESTRATEGIA 1: Usuarios específicos del documento
+        // ========================================
+        $usuarios_notificar = [];
+        
+        // Agregar creador del documento
+        if (isset($documento['usuario_creador_id']) && $documento['usuario_creador_id'] && $documento['usuario_creador_id'] != $autor_id) {
+            $usuarios_notificar[] = $documento['usuario_creador_id'];
+        }
+        
+        // Agregar usuario de seguimiento (laboratorio)
+        if (isset($documento['usuario_seguimiento_id']) && $documento['usuario_seguimiento_id'] && $documento['usuario_seguimiento_id'] != $autor_id) {
+            $usuarios_notificar[] = $documento['usuario_seguimiento_id'];
+        }
+        
+        // Obtener usuarios que han comentado (excepto el autor actual)
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT usuario_autor_id 
+            FROM documentos_comentarios 
+            WHERE documento_id = ? AND usuario_autor_id != ?
+        ");
+        $stmt->execute([$documento['id'], $autor_id]);
+        $otros_comentadores = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        $usuarios_notificar = array_merge($usuarios_notificar, $otros_comentadores);
+        
+        // ========================================
+        // ⭐ ESTRATEGIA 2: TODOS los usuarios de departamentos colaborativos
+        // ========================================
+        
+        // Definir departamentos colaborativos (SSC)
+        $departamentos_colaborativos = ['ventas', 'normatividad', 'laboratorio'];
+        
+        // Crear placeholders para IN clause
+        $placeholders = str_repeat('?,', count($departamentos_colaborativos) - 1) . '?';
+        
+        // Obtener TODOS los usuarios de departamentos colaborativos (excepto el autor)
+        $stmt = $pdo->prepare("
+            SELECT id 
+            FROM usuarios 
+            WHERE departamento IN ($placeholders) 
+            AND id != ? 
+            AND activo = 1
+        ");
+        
+        $params = array_merge($departamentos_colaborativos, [$autor_id]);
+        $stmt->execute($params);
+        $usuarios_colaborativos = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        // Combinar ambas listas y eliminar duplicados
+        $usuarios_notificar = array_unique(array_merge($usuarios_notificar, $usuarios_colaborativos));
+        
+        // ========================================
+        // CREAR NOTIFICACIONES
+        // ========================================
+        
+        // Crear preview del texto
+        $texto_preview = mb_substr($texto, 0, 50) . (mb_strlen($texto) > 50 ? '...' : '');
+        
+        // Iconos según tipo de comentario
+        $tipo_icon = [
+            'normal' => '💬',
+            'aclaracion' => '❓',
+            'correccion' => '✏️',
+            'solicitud' => '📋'
+        ];
+        
+        $icono = $tipo_icon[$tipo] ?? '💬';
+        
+        // Nombres amigables de tipos de comentario
+        $tipo_nombres = [
+            'normal' => 'comentario',
+            'aclaracion' => 'aclaración',
+            'correccion' => 'corrección',
+            'solicitud' => 'solicitud'
+        ];
+        
+        $tipo_texto = $tipo_nombres[$tipo] ?? 'comentario';
+        
+        // Log para debug
+        error_log("Notificando comentario {$tipo_texto} en {$folio} a " . count($usuarios_notificar) . " usuarios");
+        
+        // Crear notificación para cada usuario
+        foreach ($usuarios_notificar as $usuario_id) {
+            crear_notificacion(
+                'documento_comentario',
+                "{$icono} Nuevo {$tipo_texto} en {$folio}",
+                "{$autor_nombre} ({$autor_dept}): {$texto_preview}",
+                $usuario_id,
+                [
+                    'documento_id' => $documento['id'],
+                    'folio' => $folio,
+                    'autor' => $autor_nombre,
+                    'departamento' => $autor_dept,
+                    'tipo' => $tipo
+                ]
+            );
+        }
+        
+    } catch (Exception $e) {
+        error_log("Error al notificar comentario: " . $e->getMessage());
+    }
+}
+
+/**
+ * Obtener estadísticas de comentarios por documento
+ */
+function obtener_estadisticas_comentarios($documento_id) {
+    try {
+        $pdo = conectarDB();
+        
+        $stmt = $pdo->prepare("
+            SELECT 
+                COUNT(*) as total,
+                COUNT(DISTINCT usuario_autor_id) as usuarios_unicos,
+                MAX(fecha_hora_publicacion) as ultimo_comentario,
+                tipo_mensaje,
+                COUNT(*) as cantidad
+            FROM documentos_comentarios 
+            WHERE documento_id = ?
+            GROUP BY tipo_mensaje
+        ");
+        
+        $stmt->execute([$documento_id]);
+        $stats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        return [
+            'stats' => $stats,
+            'total' => array_sum(array_column($stats, 'cantidad'))
+        ];
+        
+    } catch (Exception $e) {
+        error_log("Error al obtener estadísticas: " . $e->getMessage());
+        return ['stats' => [], 'total' => 0];
+    }
+}

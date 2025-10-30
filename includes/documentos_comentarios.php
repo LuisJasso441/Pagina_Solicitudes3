@@ -13,7 +13,7 @@ function agregar_comentario_documento($documento_id, $folio, $usuario_id, $nombr
     try {
         $pdo = conectarDB();
         
-        // Verificar que el documento existe y no está completado
+        // Verificar que el documento existe (permitir comentarios en completados)
         $stmt = $pdo->prepare("SELECT id, estado, usuario_creador_id, usuario_seguimiento_id FROM documentos_colaborativos WHERE id = ?");
         $stmt->execute([$documento_id]);
         $documento = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -22,9 +22,8 @@ function agregar_comentario_documento($documento_id, $folio, $usuario_id, $nombr
             return ['success' => false, 'message' => 'Documento no encontrado'];
         }
         
-        if ($documento['estado'] == 'completado') {
-            return ['success' => false, 'message' => 'No se pueden agregar comentarios a documentos completados'];
-        }
+        // ⭐ PERMITIR COMENTARIOS EN DOCUMENTOS COMPLETADOS
+        // La validación de estado completado ha sido removida
         
         // Validar tipo de mensaje
         $tipos_validos = ['normal', 'aclaracion', 'correccion', 'solicitud'];

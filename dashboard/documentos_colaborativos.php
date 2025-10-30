@@ -35,14 +35,27 @@ $es_laboratorio = $dept_lower == 'laboratorio';
 // Obtener filtros
 $filtro_ubicacion = $_GET['ubicacion'] ?? 'local';
 $filtro_estado = $_GET['estado'] ?? '';
+$filtro_departamento = $_GET['departamento'] ?? '';
+$filtro_empleado = $_GET['empleado'] ?? '';
 $filtro_fecha_desde = $_GET['fecha_desde'] ?? '';
 $filtro_fecha_hasta = $_GET['fecha_hasta'] ?? '';
 
 // Construir filtros
 $filtros = ['ubicacion' => $filtro_ubicacion];
 
-if (!empty($filtro_estado)) {
+// Filtro de estado (solo para Base Local)
+if ($filtro_ubicacion == 'local' && !empty($filtro_estado)) {
     $filtros['estado'] = $filtro_estado;
+}
+
+// Filtro de departamento (solo para Base Global)
+if ($filtro_ubicacion == 'global' && !empty($filtro_departamento)) {
+    $filtros['departamento'] = $filtro_departamento;
+}
+
+// Filtro de empleado (solo para Base Global)
+if ($filtro_ubicacion == 'global' && !empty($filtro_empleado)) {
+    $filtros['empleado'] = $filtro_empleado;
 }
 
 if (!empty($filtro_fecha_desde)) {
@@ -168,31 +181,66 @@ $documentos = listar_documentos($filtros, $usuario_id, $departamento);
             <!-- Filtros -->
             <div class="card mb-4">
                 <div class="card-body">
-                    <form method="GET" class="row g-3">
+                    <form method="GET" class="row g-3" id="formFiltros">
                         <input type="hidden" name="ubicacion" value="<?= htmlspecialchars($filtro_ubicacion) ?>">
                         
-                        <div class="col-md-3">
-                            <label class="form-label">Estado</label>
-                            <select name="estado" class="form-select">
-                                <option value="">Todos</option>
-                                <option value="borrador" <?= $filtro_estado == 'borrador' ? 'selected' : '' ?>>Borrador</option>
-                                <option value="enviado" <?= $filtro_estado == 'enviado' ? 'selected' : '' ?>>Enviado</option>
-                                <option value="en_seguimiento" <?= $filtro_estado == 'en_seguimiento' ? 'selected' : '' ?>>En Seguimiento</option>
-                                <option value="completado" <?= $filtro_estado == 'completado' ? 'selected' : '' ?>>Completado</option>
-                            </select>
-                        </div>
+                        <?php if ($filtro_ubicacion == 'local'): ?>
+                            <!-- FILTROS PARA BASE LOCAL -->
+                            <div class="col-md-3">
+                                <label class="form-label">Estado</label>
+                                <select name="estado" class="form-select">
+                                    <option value="">Todos</option>
+                                    <option value="borrador" <?= $filtro_estado == 'borrador' ? 'selected' : '' ?>>Borrador</option>
+                                    <option value="enviado" <?= $filtro_estado == 'enviado' ? 'selected' : '' ?>>Enviado</option>
+                                    <option value="en_seguimiento" <?= $filtro_estado == 'en_seguimiento' ? 'selected' : '' ?>>En Seguimiento</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label class="form-label">Fecha Desde</label>
+                                <input type="date" name="fecha_desde" class="form-control" value="<?= htmlspecialchars($filtro_fecha_desde) ?>">
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label class="form-label">Fecha Hasta</label>
+                                <input type="date" name="fecha_hasta" class="form-control" value="<?= htmlspecialchars($filtro_fecha_hasta) ?>">
+                            </div>
+                            
+                        <?php else: ?>
+                            <!-- ⭐ FILTROS NUEVOS PARA BASE GLOBAL -->
+                            <div class="col-md-3">
+                                <label class="form-label">Departamento</label>
+                                <select name="departamento" id="filtroDepartamento" class="form-select">
+                                    <option value="">Todos los departamentos</option>
+                                    <option value="ventas" <?= $filtro_departamento == 'ventas' ? 'selected' : '' ?>>Ventas</option>
+                                    <option value="normatividad" <?= $filtro_departamento == 'normatividad' ? 'selected' : '' ?>>Normatividad</option>
+                                    <option value="laboratorio" <?= $filtro_departamento == 'laboratorio' ? 'selected' : '' ?>>Laboratorio</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label class="form-label">Empleado</label>
+                                <select name="empleado" id="filtroEmpleado" class="form-select" <?= empty($filtro_departamento) ? 'disabled' : '' ?>>
+                                    <option value="">Todos los empleados</option>
+                                    <?php if (!empty($filtro_empleado)): ?>
+                                        <option value="<?= htmlspecialchars($filtro_empleado) ?>" selected>Cargando...</option>
+                                    <?php endif; ?>
+                                </select>
+                                <small class="form-text text-muted">Selecciona primero un departamento</small>
+                            </div>
+                            
+                            <div class="col-md-2">
+                                <label class="form-label">Fecha Desde</label>
+                                <input type="date" name="fecha_desde" class="form-control" value="<?= htmlspecialchars($filtro_fecha_desde) ?>">
+                            </div>
+                            
+                            <div class="col-md-2">
+                                <label class="form-label">Fecha Hasta</label>
+                                <input type="date" name="fecha_hasta" class="form-control" value="<?= htmlspecialchars($filtro_fecha_hasta) ?>">
+                            </div>
+                        <?php endif; ?>
                         
-                        <div class="col-md-3">
-                            <label class="form-label">Fecha Desde</label>
-                            <input type="date" name="fecha_desde" class="form-control" value="<?= htmlspecialchars($filtro_fecha_desde) ?>">
-                        </div>
-                        
-                        <div class="col-md-3">
-                            <label class="form-label">Fecha Hasta</label>
-                            <input type="date" name="fecha_hasta" class="form-control" value="<?= htmlspecialchars($filtro_fecha_hasta) ?>">
-                        </div>
-                        
-                        <div class="col-md-3 d-flex align-items-end">
+                        <div class="col-md-2 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary me-2">
                                 <i class="bi bi-search"></i> Filtrar
                             </button>
@@ -247,6 +295,13 @@ $documentos = listar_documentos($filtros, $usuario_id, $departamento);
                                         <span class="badge bg-<?= $doc['prioridad'] == 'alta' ? 'danger' : ($doc['prioridad'] == 'media' ? 'warning' : 'success') ?>">
                                             <?= strtoupper($doc['prioridad']) ?>
                                         </span>
+                                        
+                                        <!-- ⭐ Mostrar departamento creador en Base Global -->
+                                        <?php if ($filtro_ubicacion == 'global'): ?>
+                                        <span class="badge bg-info ms-1">
+                                            <?= ucfirst($doc['departamento_creador']) ?>
+                                        </span>
+                                        <?php endif; ?>
                                     </div>
                                     
                                     <!-- Información principal -->
@@ -312,5 +367,65 @@ $documentos = listar_documentos($filtros, $usuario_id, $departamento);
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="<?php echo URL_BASE; ?>assets/js/notificaciones.js"></script>
+    
+    <!-- ⭐ Script para filtros dinámicos de Base Global -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const filtroDepartamento = document.getElementById('filtroDepartamento');
+        const filtroEmpleado = document.getElementById('filtroEmpleado');
+        
+        if (filtroDepartamento && filtroEmpleado) {
+            // Cargar empleados al cambiar departamento
+            filtroDepartamento.addEventListener('change', function() {
+                const departamento = this.value;
+                
+                if (departamento) {
+                    // Habilitar select de empleados
+                    filtroEmpleado.disabled = false;
+                    filtroEmpleado.innerHTML = '<option value="">Cargando empleados...</option>';
+                    
+                    // Hacer petición AJAX
+                    fetch(`<?php echo URL_BASE; ?>includes/obtener_empleados_departamento.php?departamento=${departamento}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                filtroEmpleado.innerHTML = '<option value="">Todos los empleados</option>';
+                                
+                                data.empleados.forEach(emp => {
+                                    const option = document.createElement('option');
+                                    option.value = emp.id;
+                                    option.textContent = emp.nombre_completo;
+                                    filtroEmpleado.appendChild(option);
+                                });
+                            } else {
+                                filtroEmpleado.innerHTML = '<option value="">Error al cargar empleados</option>';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            filtroEmpleado.innerHTML = '<option value="">Error al cargar empleados</option>';
+                        });
+                } else {
+                    // Deshabilitar y resetear select de empleados
+                    filtroEmpleado.disabled = true;
+                    filtroEmpleado.innerHTML = '<option value="">Selecciona primero un departamento</option>';
+                }
+            });
+            
+            // Si ya hay un departamento seleccionado al cargar la página, cargar sus empleados
+            if (filtroDepartamento.value) {
+                filtroDepartamento.dispatchEvent(new Event('change'));
+                
+                // Restaurar el valor del empleado después de cargar
+                const empleadoSeleccionado = '<?= htmlspecialchars($filtro_empleado) ?>';
+                if (empleadoSeleccionado) {
+                    setTimeout(() => {
+                        filtroEmpleado.value = empleadoSeleccionado;
+                    }, 500);
+                }
+            }
+        }
+    });
+    </script>
 </body>
 </html>
