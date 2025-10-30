@@ -9,6 +9,7 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../auth/verificar_sesion.php';
+require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/documentos_colaborativos.php';
 require_once __DIR__ . '/../includes/documentos_comentarios.php';
 
@@ -21,6 +22,12 @@ if (!sesion_activa()) {
 // Verificar método POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+    exit;
+}
+
+// ⭐ VERIFICAR TOKEN CSRF
+if (!verificar_csrf()) {
+    echo json_encode(['success' => false, 'message' => 'Token CSRF inválido']);
     exit;
 }
 

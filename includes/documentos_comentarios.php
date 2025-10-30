@@ -14,7 +14,7 @@ function agregar_comentario_documento($documento_id, $folio, $usuario_id, $nombr
         $pdo = conectarDB();
         
         // Verificar que el documento existe y no está completado
-        $stmt = $pdo->prepare("SELECT estado, usuario_creador_id, usuario_seguimiento_id FROM documentos_colaborativos WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT id, estado, usuario_creador_id, usuario_seguimiento_id FROM documentos_colaborativos WHERE id = ?");
         $stmt->execute([$documento_id]);
         $documento = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -66,7 +66,7 @@ function agregar_comentario_documento($documento_id, $folio, $usuario_id, $nombr
                 "Comentario tipo: {$tipo}"
             );
             
-            // Notificar a usuarios involucrados (excepto al autor del comentario)
+            // ⭐ Notificar a usuarios involucrados (excepto al autor del comentario)
             notificar_nuevo_comentario($documento, $usuario_id, $nombre_usuario, $departamento, $folio, $texto, $tipo);
             
             return [
@@ -163,25 +163,34 @@ function contar_comentarios_documento($documento_id) {
 }
 
 /**
- * Notificar nuevo comentario
+ * ⭐ MEJORADO: Notificar nuevo comentario a usuarios involucrados Y departamentos colaborativos
  */
 function notificar_nuevo_comentario($documento, $autor_id, $autor_nombre, $autor_dept, $folio, $texto, $tipo) {
     try {
-        // Crear lista de usuarios a notificar
+        // Validar que $documento tenga 'id'
+        if (!isset($documento['id'])) {
+            error_log("Error: documento sin ID en notificar_nuevo_comentario");
+            return;
+        }
+        
+        $pdo = conectarDB();
+        
+        // ========================================
+        // ESTRATEGIA 1: Usuarios específicos del documento
+        // ========================================
         $usuarios_notificar = [];
         
         // Agregar creador del documento
-        if ($documento['usuario_creador_id'] && $documento['usuario_creador_id'] != $autor_id) {
+        if (isset($documento['usuario_creador_id']) && $documento['usuario_creador_id'] && $documento['usuario_creador_id'] != $autor_id) {
             $usuarios_notificar[] = $documento['usuario_creador_id'];
         }
         
         // Agregar usuario de seguimiento (laboratorio)
-        if ($documento['usuario_seguimiento_id'] && $documento['usuario_seguimiento_id'] != $autor_id) {
+        if (isset($documento['usuario_seguimiento_id']) && $documento['usuario_seguimiento_id'] && $documento['usuario_seguimiento_id'] != $autor_id) {
             $usuarios_notificar[] = $documento['usuario_seguimiento_id'];
         }
         
         // Obtener usuarios que han comentado (excepto el autor actual)
-        $pdo = conectarDB();
         $stmt = $pdo->prepare("
             SELECT DISTINCT usuario_autor_id 
             FROM documentos_comentarios 
@@ -190,11 +199,42 @@ function notificar_nuevo_comentario($documento, $autor_id, $autor_nombre, $autor
         $stmt->execute([$documento['id'], $autor_id]);
         $otros_comentadores = $stmt->fetchAll(PDO::FETCH_COLUMN);
         
-        $usuarios_notificar = array_unique(array_merge($usuarios_notificar, $otros_comentadores));
+        $usuarios_notificar = array_merge($usuarios_notificar, $otros_comentadores);
         
-        // Crear notificación para cada usuario
+        // ========================================
+        // ⭐ ESTRATEGIA 2: TODOS los usuarios de departamentos colaborativos
+        // ========================================
+        
+        // Definir departamentos colaborativos (SSC)
+        $departamentos_colaborativos = ['ventas', 'normatividad', 'laboratorio'];
+        
+        // Crear placeholders para IN clause
+        $placeholders = str_repeat('?,', count($departamentos_colaborativos) - 1) . '?';
+        
+        // Obtener TODOS los usuarios de departamentos colaborativos (excepto el autor)
+        $stmt = $pdo->prepare("
+            SELECT id 
+            FROM usuarios 
+            WHERE departamento IN ($placeholders) 
+            AND id != ? 
+            AND activo = 1
+        ");
+        
+        $params = array_merge($departamentos_colaborativos, [$autor_id]);
+        $stmt->execute($params);
+        $usuarios_colaborativos = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        // Combinar ambas listas y eliminar duplicados
+        $usuarios_notificar = array_unique(array_merge($usuarios_notificar, $usuarios_colaborativos));
+        
+        // ========================================
+        // CREAR NOTIFICACIONES
+        // ========================================
+        
+        // Crear preview del texto
         $texto_preview = mb_substr($texto, 0, 50) . (mb_strlen($texto) > 50 ? '...' : '');
         
+        // Iconos según tipo de comentario
         $tipo_icon = [
             'normal' => '💬',
             'aclaracion' => '❓',
@@ -204,10 +244,24 @@ function notificar_nuevo_comentario($documento, $autor_id, $autor_nombre, $autor
         
         $icono = $tipo_icon[$tipo] ?? '💬';
         
+        // Nombres amigables de tipos de comentario
+        $tipo_nombres = [
+            'normal' => 'comentario',
+            'aclaracion' => 'aclaración',
+            'correccion' => 'corrección',
+            'solicitud' => 'solicitud'
+        ];
+        
+        $tipo_texto = $tipo_nombres[$tipo] ?? 'comentario';
+        
+        // Log para debug
+        error_log("Notificando comentario {$tipo_texto} en {$folio} a " . count($usuarios_notificar) . " usuarios");
+        
+        // Crear notificación para cada usuario
         foreach ($usuarios_notificar as $usuario_id) {
             crear_notificacion(
                 'documento_comentario',
-                "{$icono} Nuevo comentario en {$folio}",
+                "{$icono} Nuevo {$tipo_texto} en {$folio}",
                 "{$autor_nombre} ({$autor_dept}): {$texto_preview}",
                 $usuario_id,
                 [
